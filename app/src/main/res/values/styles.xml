@@ -1,8 +1,24 @@
 <resources>
 
-    <!-- Base application theme. -->
-    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
-        <!-- Customize your theme here. -->
+
+    <style name="AppBaseTheme" parent="Theme.AppCompat.Light.NoActionBar">
+        <!-- toolbar（actionbar）颜色 -->
+        <item name="colorPrimary">@color/primary_color</item>
+        <!-- 状态栏颜色 -->
+        <item name="colorPrimaryDark">@color/primary_color_dark</item>
+        <item name="colorAccent">@color/secondary_color</item>
+
+        <item name="android:windowNoTitle">true</item>
+        <!-- 窗口的背景颜色 -->
+        <!--<item name="android:windowIsTranslucent">true</item>-->
+        <!--<item name="android:windowBackground">@android:color/transparent</item>-->
     </style>
+
+    <style name="AppTheme" parent="@style/AppBaseTheme">
+    </style>
+
+    <declare-styleable name="FloatingHintEditText">
+        <attr name="floatingHintColor" format="color"/>
+    </declare-styleable>
 
 </resources>

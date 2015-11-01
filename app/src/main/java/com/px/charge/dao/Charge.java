@@ -14,9 +14,28 @@ public class Charge implements Serializable {
     private float mNumber;
     private String mDescription;
 
-    public Charge(String mTitle, float mNumber, String mDescription) {
+    protected Charge(String mTitle, float mNumber, String mDescription) {
         this.mTitle = mTitle;
         this.mNumber = mNumber;
         this.mDescription = mDescription;
+    }
+    protected Charge(long id, Date paidDate, Date createDate, String title, float number, String des) {
+        this(title, number, des);
+
+        mId = id;
+        mPaidDate = paidDate;
+        mCreateDate = createDate;
+    }
+
+    public String getTitle() {
+        return mTitle;
+    }
+
+    public float getPrice() {
+        return mNumber;
+    }
+
+    public Date getPaidDate() {
+        return mPaidDate;
     }
 }

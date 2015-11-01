@@ -9,20 +9,20 @@
               android:paddingTop="@dimen/activity_vertical_margin"
               tools:context=".MainActivity">
 
-    <EditText
+    <com.common.ui.FloatHintEditText
         android:id="@+id/activity_main__title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="标题"/>
 
-    <EditText
+    <com.common.ui.FloatHintEditText
         android:id="@+id/activity_main__num"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="价钱"
         android:numeric="decimal"/>
 
-    <EditText
+    <com.common.ui.FloatHintEditText
         android:id="@+id/activity_main__des"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -33,5 +33,25 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="确定"/>
+
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" >
+        <Button
+            android:id="@+id/activity_main__tt"
+            android:layout_width="0dip"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="微信"/>
+        <Button
+            android:id="@+id/activity_main__ali"
+            android:layout_width="0dip"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="支付宝"/>
+
+    </LinearLayout>
 
 </LinearLayout>

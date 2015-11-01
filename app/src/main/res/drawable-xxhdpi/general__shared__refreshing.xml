@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animation-list xmlns:android="http://schemas.android.com/apk/res/android"
+    android:oneshot="false" >
+
+    <item
+        android:drawable="@drawable/general__shared__refreshing_1"
+        android:duration="50"/>
+    <item
+        android:drawable="@drawable/general__shared__refreshing_2"
+        android:duration="50"/>
+    <item
+        android:drawable="@drawable/general__shared__refreshing_3"
+        android:duration="50"/>
+    <item
+        android:drawable="@drawable/general__shared__refreshing_4"
+        android:duration="50"/>
+    <item
+        android:drawable="@drawable/general__shared__refreshing_5"
+        android:duration="50"/>
+    <item
+        android:drawable="@drawable/general__shared__refreshing_6"
+        android:duration="50"/>
+    <item
+        android:drawable="@drawable/general__shared__refreshing_7"
+        android:duration="50"/>
+    <item
+        android:drawable="@drawable/general__shared__refreshing_8"
+        android:duration="50"/>
+    <item
+        android:drawable="@drawable/general__shared__refreshing_9"
+        android:duration="50"/>
+    <item
+        android:drawable="@drawable/general__shared__refreshing_10"
+        android:duration="50"/>
+    <item
+        android:drawable="@drawable/general__shared__refreshing_11"
+        android:duration="50"/>
+    <item
+        android:drawable="@drawable/general__shared__refreshing_12"
+        android:duration="50"/>
+
+</animation-list>
