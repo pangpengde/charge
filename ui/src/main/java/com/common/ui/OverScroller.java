@@ -458,6 +458,12 @@ public class OverScroller {
         mScrollerY.fling(startY, velocityY, minY, maxY, overY);
     }
 
+    public void flyTo(int startX, int startY, int endX, int endY, int velocityX, int velocityY) {
+        mMode = FLING_MODE;
+        mScrollerX.flyTo(startX, endX, velocityX);
+        mScrollerY.flyTo(startY, endY, velocityY);
+    }
+
     /**
      * Notify the scroller that we've reached a horizontal boundary.
      * Normally the information to handle this will already be known
@@ -789,6 +795,25 @@ public class OverScroller {
             if (mFinal > max) {
                 adjustDuration(mStart, mFinal, max);
                 mFinal = max;
+            }
+        }
+
+        void flyTo(int start, int end, int velocity) {
+            mOver = 0;
+            mFinished = false;
+            mCurrVelocity = mVelocity = velocity;
+            mDuration = mSplineDuration = 0;
+            mStartTime = AnimationUtils.currentAnimationTimeMillis();
+            mCurrentPosition = mStart = start;
+
+            mState = SPLINE;
+            mSplineDistance = end - mStart;
+            if (mSplineDistance * velocity <= 0) {
+                mSplineDistance = 0;
+            }
+            mFinal = mStart + mSplineDistance;
+            if (velocity != 0) {
+                mDuration = mSplineDuration = (int) (1000.0 * mSplineDistance / (0.6 * velocity));
             }
         }
 

@@ -259,7 +259,9 @@ public abstract class UiUtils {
 		final Matrix m = tempMatrices.acquire();
 		transformMatrix(m, fromView, toView);
 		m.preTranslate(fromView.getScrollX(), fromView.getScrollY()); // 转换到fromView的内容坐标
-		m.postTranslate(-toView.getScrollX(), -toView.getScrollY()); // 转换到toView的视口坐标
+        if (toView != null) {
+            m.postTranslate(-toView.getScrollX(), -toView.getScrollY()); // 转换到toView的视口坐标
+        }
 		
 		final MotionEvent newEvent = obtainMotionEvent(ev, m);
 		tempMatrices.release(m);

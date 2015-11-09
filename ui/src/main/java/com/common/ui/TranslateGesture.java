@@ -50,6 +50,9 @@ public class TranslateGesture extends ViewGesture {
 	public void setDetectOrder(int order) {
 		mDetectOrder = Math.max(0, order);
 	}
+    public int getTouchPointCount() {
+        return mLastMotion.getPointerCount();
+    }
 
 	// ### ViewGesture抽象方法实现 ###
 	@Override
@@ -85,8 +88,8 @@ public class TranslateGesture extends ViewGesture {
 		}
 		
 		if (m.getPointerCount() == 1) {
-			PointF origin = mLastMotion.copyScreenCoord(0, new PointF());
-			PointF translation = m.copyScreenCoord(0, new PointF());
+			PointF origin = mLastMotion.copyScreenCoords(0, new PointF());
+			PointF translation = m.copyScreenCoords(0, new PointF());
 			translation.offset(-origin.x, -origin.y);
 
 			if (mDetectedCount < 0) {
@@ -118,10 +121,10 @@ public class TranslateGesture extends ViewGesture {
 				return;
 			}
 			
-			PointF p00 = mLastMotion.copyScreenCoord(0, new PointF());
-			PointF p01 = mLastMotion.copyScreenCoord(1, new PointF()); 
-			PointF p10 = m.copyScreenCoord(pi10, new PointF());
-			PointF p11 = m.copyScreenCoord(pi11, new PointF());
+			PointF p00 = mLastMotion.copyScreenCoords(0, new PointF());
+			PointF p01 = mLastMotion.copyScreenCoords(1, new PointF()); 
+			PointF p10 = m.copyScreenCoords(pi10, new PointF());
+			PointF p11 = m.copyScreenCoords(pi11, new PointF());
 			
 			double a0 = calcAngle(p00, p01); 
 			double a1 = calcAngle(p10, p11);
@@ -162,6 +165,6 @@ public class TranslateGesture extends ViewGesture {
 		}
 	}
 	private void setLastMotion(ViewMotion m) {
-		mLastMotion.copy(m);
+		mLastMotion.set(m);
 	}
 }

@@ -441,11 +441,12 @@ public class GridItemsView extends ItemsView {
 		setContentDimension(mRowWidth + getCellsMarginHorizontal(), rowTop + getCellsMarginBottom());
 	}
     @Override
-	protected int onStruct(int widthSpec, int heightSpec) {
-		final int widthMode = MeasureSpec.getMode(widthSpec);
-		final int widthSize = MeasureSpec.getSize(widthSpec);
-		final int horzMargin = getCellsMarginHorizontal();
-		final int vertMargin = getCellsMarginVertical();
+    protected int onStruct(int widthSpec, int heightSpec) {
+        final int widthMode = MeasureSpec.getMode(widthSpec);
+        final int widthSize = MeasureSpec.getSize(widthSpec);
+        final int horzMargin = getCellsMarginHorizontal();
+        final int vertMargin = getCellsMarginVertical();
+        final int itemCount = getItemCount();
 
 		// 保存旧的结构信息
 		final int oldColumnWidth = mColumnWidth;
@@ -454,157 +455,160 @@ public class GridItemsView extends ItemsView {
 		mGroupCount = getAdapter() instanceof GroupItemsAdapter ?
 					((GroupItemsAdapter) getAdapter()).getGroupCount() : 0;
         // TODO mCells在adpater调用itemChanged之后才会更新, 这里的mGroups也应该保持相同逻辑
-		if (mGroupCount < 1) {
-			for (int n = mGroups.size() - 1; n >= 0; --n) {
-				final ItemGroup group = mGroups.get(n);
-				if (group.mTitleView != null) {
-					removeViewInLayout(group.mTitleView);
-				}
-				mGroups.remove(n);
-			}
-			
-			final ItemGroup group = new ItemGroup();
-			group.mStartCellIndex = 0;
-			group.mEndCellIndex = group.mStartCellIndex + getItemCount();
-			group.mTitleView = null;
-			mGroups.add(group);
-		} else {
-			final GroupItemsAdapter adapter = (GroupItemsAdapter) getAdapter();
-			mGroups.ensureCapacity(mGroupCount);
-			for (int n = 0; n < mGroupCount; ++n) {
-				final ItemGroup group;
-				if (n < mGroups.size()) {
-					group = mGroups.get(n);
-				} else {
-					group = new ItemGroup();
-					mGroups.add(group);
-				}
+        if (mGroupCount < 1) {
+            for (int n = mGroups.size() - 1; n >= 0; --n) {
+                final ItemGroup group = mGroups.get(n);
+                if (group.mTitleView != null) {
+                    removeViewInLayout(group.mTitleView);
+                }
+                mGroups.remove(n);
+            }
 
-				group.mStartCellIndex = n < 1 ? 0 : mGroups.get(n - 1).mEndCellIndex;
-				group.mEndCellIndex = group.mStartCellIndex + adapter.getGroupSize(n);
+            final ItemGroup group = new ItemGroup();
+            group.mStartCellIndex = 0;
+            group.mEndCellIndex = group.mStartCellIndex + itemCount;
+            group.mTitleView = null;
+            mGroups.add(group);
+        } else {
+            final GroupItemsAdapter adapter = (GroupItemsAdapter) getAdapter();
+            mGroups.ensureCapacity(mGroupCount);
+            for (int n = 0; n < mGroupCount; ++n) {
+                final ItemGroup group;
+                if (n < mGroups.size()) {
+                    group = mGroups.get(n);
+                } else {
+                    group = new ItemGroup();
+                    mGroups.add(group);
+                }
 
-				final View oldTitleView = group.mTitleView;
-				group.mTitleView = adapter.getGroupTitleView(n, oldTitleView, this);
-				if (group.mTitleView != oldTitleView) {
-					if (oldTitleView != null) {
-						removeViewInLayout(oldTitleView);
-					}
-					if (group.mTitleView != null) {
-						final LayoutParams lp;
-						if (group.mTitleView.getLayoutParams() == null) {
-							lp = (LayoutParams) generateDefaultLayoutParams();
-						} else if (group.mTitleView.getLayoutParams() instanceof LayoutParams) {
-							lp = (LayoutParams) group.mTitleView.getLayoutParams();
-						} else {
-							lp = (LayoutParams) generateLayoutParams(group.mTitleView.getLayoutParams());
-						}
-						
-						addViewInLayout(group.mTitleView, -1, lp);
-					}
-				}
-			}
-			for (int n = mGroups.size() - 1; n >= mGroupCount; --n) {
-				final ItemGroup group = mGroups.get(n);
-				if (group.mTitleView != null) {
-					removeViewInLayout(group.mTitleView);
-				}
-				mGroups.remove(n);
-			}
-		}
-		
-		// 测量第一个单元视图
-		final int cellWidth;
-		final int cellHeight;
-		if (getItemCount() > 0) {
-			setCellWidthMeasureSpec(0, MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
-			setCellHeightMeasureSpec(0, MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
-			measureCell(0);
-			
-			cellWidth = widthMode == MeasureSpec.UNSPECIFIED ? 
-					getCellMeasuredWidth(0) : Math.min(getCellMeasuredWidth(0), widthSize - horzMargin);
-			cellHeight = getCellMeasuredHeight(0);
-		} else {
-			cellWidth = 0;
-			cellHeight = 0;
-		}
+                group.mStartCellIndex = n < 1 ? 0 : mGroups.get(n - 1).mEndCellIndex;
+                group.mEndCellIndex = group.mStartCellIndex + adapter.getGroupSize(n);
 
-		final int columnCount;
-		final int columnWidth;
-		final int columnSpacing;
-		if (mStretchMode == STRETCH_COLUMN_SPACING) {
-			// 优先确定列宽
-			if (mDesiredColumnWidth > 0) {
-				// 指定了期望的列宽
-				columnWidth = mDesiredColumnWidth;
-			} else {
-				// 没有指定期望的列宽
-				columnWidth = cellWidth;
-			}
-			
-			// 然后确定列数
-			if (mNumColumns > 0) {
-				// 直接指定了列数
-				columnCount = mNumColumns;
-			} else if (widthMode == MeasureSpec.UNSPECIFIED) {
-				// 没有指定列数, 且没有限定行宽.
-				columnCount = 1;
-			} else {
-				// 没有指定列数, 但限定了行宽.
-				columnCount = (widthSize - horzMargin + mDesiredColumnSpacing) / (columnWidth + mDesiredColumnSpacing);
-			}
-			
-			// 最后确定列间距
-			if (widthMode == MeasureSpec.UNSPECIFIED) {
-				// 没有限定行宽
-				columnSpacing = mDesiredColumnSpacing;
-			} else {
-				// 限定了行宽
-				columnSpacing = columnCount < 2 ? 0 : (widthSize - horzMargin - columnWidth * columnCount) / (columnCount - 1);
-			}
-			
-		} else { // mStretchMode == STRETCH_COLUMN_WIDTH
-			// 优先确定列数
-			if (mNumColumns > 0) {
-				// 直接指定了列数
-				columnCount = mNumColumns;
-			} else if (widthMode == MeasureSpec.UNSPECIFIED) {
-				// 没有指定列数, 且没有限定行宽.
-				columnCount = 1;
-			} else if (mDesiredColumnWidth > 0) {
-				// 没有指定列数, 但限定了行宽, 并指定了期望的列宽.
-				final int bestCount = (widthSize - horzMargin + mDesiredColumnSpacing) / (mDesiredColumnWidth + mDesiredColumnSpacing);
-				columnCount = Math.max(1, bestCount); // 保证至少有一列
-			} else {
-				// 没有指定列数, 但限定了行宽, 但没有指定期望的列宽.
-				final int cellCount = (widthSize - horzMargin + mDesiredColumnSpacing) / (cellWidth + mDesiredColumnSpacing);
-				columnCount = Math.max(1, cellCount);
-			}
-			assert columnCount > 0;
-			
-			// 然后确定列宽
-			if (widthMode != MeasureSpec.UNSPECIFIED) {
-				// 限定了行宽
-				columnWidth = (widthSize - horzMargin + mDesiredColumnSpacing) / columnCount - mDesiredColumnSpacing;
-			} else if (mDesiredColumnWidth > 0) {
-				// 没有限定行宽, 但指定了期望的列宽.
-				columnWidth = mDesiredColumnWidth;
-			} else {
-				// 没有限定行宽, 且没有指定期望的列宽.
-				columnWidth = cellWidth;
-			}
-			
-			// 最后确定列间距
-			columnSpacing = mDesiredColumnSpacing;
-		}
-		
-		mColumnCount = columnCount;
-		if (columnSpacing < 0) {
-			mColumnWidth = mRowWidth / columnCount;
-			mColumnSpacing = 0;
-		} else {
-			mColumnWidth = columnWidth;
-			mColumnSpacing = columnSpacing;
-		}
+                final View oldTitleView = group.mTitleView;
+                group.mTitleView = adapter.getGroupTitleView(n, oldTitleView, this);
+                if (group.mTitleView != oldTitleView) {
+                    if (oldTitleView != null) {
+                        removeViewInLayout(oldTitleView);
+                    }
+                    if (group.mTitleView != null) {
+                        final LayoutParams lp;
+                        if (group.mTitleView.getLayoutParams() == null) {
+                            lp = (LayoutParams) generateDefaultLayoutParams();
+                        } else if (group.mTitleView.getLayoutParams() instanceof LayoutParams) {
+                            lp = (LayoutParams) group.mTitleView.getLayoutParams();
+                        } else {
+                            lp = (LayoutParams) generateLayoutParams(group.mTitleView.getLayoutParams());
+                        }
+
+                        addViewInLayout(group.mTitleView, -1, lp);
+                    }
+                }
+            }
+            for (int n = mGroups.size() - 1; n >= mGroupCount; --n) {
+                final ItemGroup group = mGroups.get(n);
+                if (group.mTitleView != null) {
+                    removeViewInLayout(group.mTitleView);
+                }
+                mGroups.remove(n);
+            }
+        }
+
+        // 测量第一个单元视图
+        final int cellWidth;
+        final int cellHeight;
+        if (itemCount > 0) {
+            setCellWidthMeasureSpec(0, MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
+            setCellHeightMeasureSpec(0, MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
+            measureCell(0);
+
+            cellWidth = widthMode == MeasureSpec.UNSPECIFIED ?
+                    getCellMeasuredWidth(0) : Math.min(getCellMeasuredWidth(0), widthSize - horzMargin);
+            cellHeight = getCellMeasuredHeight(0);
+        } else {
+            cellWidth = 0;
+            cellHeight = 0;
+        }
+
+        final int columnCount;
+        final int columnWidth;
+        final int columnSpacing;
+        if (mStretchMode == STRETCH_COLUMN_SPACING) {
+            // 优先确定列宽
+            if (mDesiredColumnWidth > 0) {
+                // 指定了期望的列宽
+                columnWidth = mDesiredColumnWidth;
+            } else {
+                // 没有指定期望的列宽
+                columnWidth = cellWidth;
+            }
+
+            // 然后确定列数
+            if (mNumColumns > 0) {
+                // 直接指定了列数
+                columnCount = mNumColumns;
+            } else if (widthMode == MeasureSpec.UNSPECIFIED) {
+                // 没有指定列数, 且没有限定行宽.
+                columnCount = 1;
+            } else {
+                // 没有指定列数, 但限定了行宽.
+                columnCount = (columnWidth + mDesiredColumnSpacing > 0) ?
+                        (widthSize - horzMargin + mDesiredColumnSpacing) / (columnWidth + mDesiredColumnSpacing) : itemCount;
+            }
+
+            // 最后确定列间距
+            if (widthMode == MeasureSpec.UNSPECIFIED) {
+                // 没有限定行宽
+                columnSpacing = mDesiredColumnSpacing;
+            } else {
+                // 限定了行宽
+                columnSpacing = columnCount < 2 ? 0 : (widthSize - horzMargin - columnWidth * columnCount) / (columnCount - 1);
+            }
+
+        } else { // mStretchMode == STRETCH_COLUMN_WIDTH
+            // 优先确定列数
+            if (mNumColumns > 0) {
+                // 直接指定了列数
+                columnCount = mNumColumns;
+            } else if (widthMode == MeasureSpec.UNSPECIFIED) {
+                // 没有指定列数, 且没有限定行宽.
+                columnCount = 1;
+            } else if (mDesiredColumnWidth > 0) {
+                // 没有指定列数, 但限定了行宽, 并指定了期望的列宽.
+                final int bestCount = (mDesiredColumnWidth + mDesiredColumnSpacing) > 0 ?
+                        (widthSize - horzMargin + mDesiredColumnSpacing) / (mDesiredColumnWidth + mDesiredColumnSpacing) : itemCount;
+                columnCount = Math.max(1, bestCount); // 保证至少有一列
+            } else {
+                // 没有指定列数, 但限定了行宽, 但没有指定期望的列宽.
+                final int cellCount = (cellWidth + mDesiredColumnSpacing) > 0 ?
+                        (widthSize - horzMargin + mDesiredColumnSpacing) / (cellWidth + mDesiredColumnSpacing) : itemCount;
+                columnCount = Math.max(1, cellCount);
+            }
+            assert columnCount > 0;
+
+            // 然后确定列宽
+            if (widthMode != MeasureSpec.UNSPECIFIED) {
+                // 限定了行宽
+                columnWidth = (widthSize - horzMargin + mDesiredColumnSpacing) / columnCount - mDesiredColumnSpacing;
+            } else if (mDesiredColumnWidth > 0) {
+                // 没有限定行宽, 但指定了期望的列宽.
+                columnWidth = mDesiredColumnWidth;
+            } else {
+                // 没有限定行宽, 且没有指定期望的列宽.
+                columnWidth = cellWidth;
+            }
+
+            // 最后确定列间距
+            columnSpacing = mDesiredColumnSpacing;
+        }
+
+        mColumnCount = columnCount;
+        if (columnSpacing < 0) {
+            mColumnWidth = mRowWidth / columnCount;
+            mColumnSpacing = 0;
+        } else {
+            mColumnWidth = columnWidth;
+            mColumnSpacing = columnSpacing;
+        }
 
 		// 确定行数
 		mRowCount = 0;

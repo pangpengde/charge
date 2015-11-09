@@ -54,6 +54,7 @@ public abstract class ViewScroller implements Scrollable {
 	private DoSlide mRunningSlide = null;
 	private long mIdleStartTime = System.currentTimeMillis();
 	private long mScrollStartTime = 0;
+	private Runnable mPendingScrollAfterLayout = null;
 	private OnScrollListener mOnScrollListener = null;
 
 	// ### 滚动条相关值域 ###
@@ -95,8 +96,7 @@ public abstract class ViewScroller implements Scrollable {
 		if (mScrollableView.isEnabled() == false)
 			return false;
 
-		mScrollDetector.onIntercept(mScrollableView, ev);
-		return mScrollDetector.hasGestureHolding();
+		return mScrollDetector.onIntercept(mScrollableView, ev);
 	}
 	public boolean onTouchEvent(MotionEvent event) {
 		if (mScrollableView.isEnabled() == false)
@@ -120,6 +120,8 @@ public abstract class ViewScroller implements Scrollable {
 		}
 	}
 	public void afterOnDetachedFromWindow() {
+		abortRunningSlide();
+		setScrollState(ScrollState.IDLE);
 		mScrollObserverList.clear();
 	}
 	public void afterOnLayout(boolean changed, int l, int t, int r, int b) {
@@ -127,6 +129,19 @@ public abstract class ViewScroller implements Scrollable {
 			// ATTENTION(by lizhan@duokan.com):
 			// 此处调用的目的是保持当前视口位置, 更新视口尺寸.
 			doScrollBy(0.0f, 0.0f);
+		}
+		
+		// 布局彻底结束后, 修正视口位置.
+		if (mPendingScrollAfterLayout == null) {
+			mPendingScrollAfterLayout = new Runnable() {
+				@Override
+				public void run() {
+					mPendingScrollAfterLayout = null;
+					doRestrictScrollBy(0, 0);
+				}
+			};
+			
+			UiUtils.runAfterLayout(mScrollableView, mPendingScrollAfterLayout);
 		}
 	}
 	public void afterDraw(Canvas canvas) {
@@ -166,6 +181,50 @@ public abstract class ViewScroller implements Scrollable {
 		if (disallowIntercept) {
 			mScrollDetector.reset(mScrollableView);
 		}
+	}
+	public boolean requestChildRectangleOnScreen(View child, Rect rectangle, boolean immediate) {
+		final Rect visibleBounds = getVisibleBoundsOnScreen();
+		final boolean requestParent;
+		if (visibleBounds.isEmpty()) {
+			visibleBounds.set(getViewportBounds());
+			requestParent = true;
+		} else {
+			requestParent = false;
+		}
+		
+		if (visibleBounds.isEmpty())
+			return true;
+		
+		final Rect requestRect = new Rect(rectangle);
+		UiUtils.transformRect(requestRect, child, mScrollableView);
+		
+		final int deltaX, deltaY;
+		if (requestRect.intersect(mContentBounds)) {
+			deltaX = calcVisibleDeltaXToFitRequest(visibleBounds, requestRect);
+			deltaY = calcVisibleDeltaYToFitRequest(visibleBounds, requestRect);
+		} else {
+			deltaX = 0;
+			deltaY = 0;
+		}
+		
+		if (deltaX != 0 || deltaY != 0) {
+			if (immediate) {
+				scrollBy(deltaX, deltaY);
+			} else {
+				scrollSmoothlyBy(deltaX, deltaY, UiUtils.ANIM_DURATION_SHORT, null, null);
+			}
+		}
+		
+		return !requestParent;
+	}
+	public boolean requestChildOnScreen(View child, boolean immediate) {
+		return requestChildRectangleOnScreen(child, new Rect(0, 0, child.getWidth(), child.getHeight()), immediate);
+	}
+	public Rect getVisibleBoundsOnScreen() {
+		final Rect visibleBounds = new Rect();
+		UiUtils.getViewBounds(visibleBounds, mScrollableView.getRootView(), mScrollableView);
+		visibleBounds.intersect(getViewportBounds());
+		return visibleBounds;
 	}
 	public boolean isThumbVisible() {
 		return alphaOfThumb() > 0;
@@ -661,7 +720,10 @@ public abstract class ViewScroller implements Scrollable {
 		final int maxScrollY = maxScrollY();
 		int x = Math.max(minScrollX, Math.min(mViewportBounds.left, maxScrollX));
 		int y = Math.max(minScrollY, Math.min(mViewportBounds.top, maxScrollY));
-		scrollTo(x, y);
+		
+		if (mViewportBounds.left != x || mViewportBounds.top != y) {
+			scrollTo(x, y);
+		}
 	}
 	@Override
 	public void springBackSmoothly() {
@@ -833,6 +895,11 @@ public abstract class ViewScroller implements Scrollable {
 		);
 		mRunningSlide = new DoSlide(force, onFinish, onCancel);
 		mScrollableView.post(mRunningSlide); 
+	}
+	protected final void slide(float vx, float vy, int endX, int endY, Runnable onFinish, Runnable onCancel) {
+		mScroller.flyTo(mViewportBounds.left, mViewportBounds.top, endX, endY, Math.round(vx), Math.round(vy));
+		mRunningSlide = new DoSlide(false, onFinish, onCancel);
+		mScrollableView.post(mRunningSlide);
 	}
 	private final void abortRunningSlide() {
 		mScroller.forceFinished(true);
@@ -1153,6 +1220,42 @@ public abstract class ViewScroller implements Scrollable {
 		
 		parent.requestDisallowInterceptTouchEvent(disallow);
 	}
+    protected static int calcVisibleDeltaXToFitRequest(Rect visibleRect, Rect requestRect) {
+    	if (visibleRect.left <= requestRect.left && visibleRect.right >= requestRect.right)
+    		return 0; // 可见区域已经包含请求区域, 无需移动.
+    	
+    	if (visibleRect.left > requestRect.left && visibleRect.right < requestRect.right)
+    		return 0; // 可见区域在请求区域中间, 不能确定移动方向, 不能移动.
+    	
+    	final int delta;
+    	if (visibleRect.left < requestRect.left) {
+    		// 可见区域在请求区域左侧, 向右移动至请求区域.
+    		delta = Math.min(requestRect.left - visibleRect.left, requestRect.right - visibleRect.right); // 移动距离尽可能小
+    	} else {
+    		// 可见区域在请求区域右侧, 向左移动至请求区域.
+    		delta = -Math.min(visibleRect.left - requestRect.left, visibleRect.right - requestRect.right); // 移动距离尽可能小
+    	}
+    	
+        return delta;
+    }
+    protected static int calcVisibleDeltaYToFitRequest(Rect visibleRect, Rect requestRect) {
+    	if (visibleRect.top <= requestRect.top && visibleRect.bottom >= requestRect.bottom)
+    		return 0; // 可见区域已经包含请求区域, 无需移动.
+    	
+    	if (visibleRect.top > requestRect.top && visibleRect.bottom < requestRect.bottom)
+    		return 0; // 可见区域在请求区域中间, 不能确定移动方向, 不能移动.
+    	
+    	final int delta;
+    	if (visibleRect.top < requestRect.top) {
+    		// 可见区域在请求区域上方, 向下移动至请求区域.
+    		delta = Math.min(requestRect.top - visibleRect.top, requestRect.bottom - visibleRect.bottom); // 移动距离尽可能小
+    	} else {
+    		// 可见区域在请求区域下方, 向上移动至请求区域.
+    		delta = -Math.min(visibleRect.top - requestRect.top, visibleRect.bottom - requestRect.bottom); // 移动距离尽可能小
+    	}
+    	
+        return delta;
+    }
 	private final void notifyScrollStateChanged(ScrollState oldState, ScrollState newState) {
 		if (mOnScrollListener != null) {
 			mOnScrollListener.onScrollStateChanged(this, oldState, newState);

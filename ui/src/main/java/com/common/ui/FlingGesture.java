@@ -1,16 +1,13 @@
 package com.common.ui;
 
-import java.util.LinkedList;
-
 import android.graphics.PointF;
-import android.util.Pair;
 import android.view.MotionEvent;
+import android.view.VelocityTracker;
 import android.view.View;
 
 public class FlingGesture extends ViewGesture {
-	private final TranslateGesture mTranslateGesture = new TranslateGesture();
-	private long mSampleInterval = 300;
-	private LinkedList<Pair<PointF, Long>> mSampleList = new LinkedList<Pair<PointF, Long>>();
+    private final PointF mDownPos = new PointF();
+	private VelocityTracker mVelocityTracker = null;
 	private float mMinVelocity = Float.NaN;
 	private float mMaxVelocity = Float.NaN;
 	private float mMinAngle = 0.0f;
@@ -38,8 +35,16 @@ public class FlingGesture extends ViewGesture {
 	// ### ViewGesture抽象函数重写 ###
 	@Override
 	protected void doRestart(View v, boolean reset) {
-		mTranslateGesture.restart(v, reset || !mTranslateGesture.keepDetecting());
-		mSampleList.clear();
+		if (reset) {
+			if (mVelocityTracker != null) {
+				mVelocityTracker.recycle();
+				mVelocityTracker = null;
+			}
+		} else {
+			if (mVelocityTracker != null) {
+				mVelocityTracker.clear();
+			}
+		}
 	}
 	@Override
 	protected void doDetect(View v, final MotionEvent m, boolean delayed, ViewGesture.GestureListener listener) {
@@ -48,75 +53,44 @@ public class FlingGesture extends ViewGesture {
 			keepDetecting(false);
 			return;
 		}
-		GestureListener flingListener = (GestureListener) listener;
+		final GestureListener flingListener = (GestureListener) listener;
+        final MotionEvent m2screen = UiUtils.obtainMotionEvent(m, v, null);
 
-		mTranslateGesture.detect(v, m, delayed, new TranslateGesture.GestureListener() {
-			@Override
-			public void onTouchUp(View v, PointF point) {
+        if (mVelocityTracker == null) {
+            mVelocityTracker = VelocityTracker.obtain();
+        }
+        mVelocityTracker.addMovement(m2screen);
 
-			}
-			@Override
-			public void onTouchDown(View v, PointF point) {
-				
-			}
-			@Override
-			public void onTouchCancel(View v, PointF point) {
-				
-			}
-			@Override
-			public void onTranslate(ViewGesture g, View v, PointF origin, PointF translation) {
-				long curTime = m.getEventTime();
-				mSampleList.addLast(new Pair<PointF, Long>(translation, curTime));
-			}
-		});
-		
-		if (m.getActionMasked() == MotionEvent.ACTION_UP && mSampleList.isEmpty() == false) {
-			PointF abs = new PointF(0.0f, 0.0f);
-			PointF total = new PointF(0.0f, 0.0f);
-			long beginTime = 0;
-			long endTime = m.getEventTime();
-			for (Pair<PointF, Long> sample : mSampleList) {
-				long interval = endTime - sample.second;
-				if (interval > mSampleInterval) {
-					continue;
-				}
-				
-				if (beginTime == 0)
-					beginTime = sample.second;
-				
-				abs.x += Math.abs(sample.first.x);
-				abs.y += Math.abs(sample.first.y);
-				total.x += sample.first.x;
-				total.y += sample.first.y;
-			}
-			
-			if (Math.abs(total.x) < UiUtils.getScaledTouchSlop(v.getContext())
-					&& Math.abs(total.y) < UiUtils.getScaledTouchSlop(v.getContext()))
-				return;
-			
-			float interval = (endTime - beginTime) / 1000.0f;
-			PointF velocity = new PointF(abs.x / interval, abs.y / interval);
-			float minVelocity = Float.isNaN(mMinVelocity) ? UiUtils.getScaledMinFlingVelocity(v.getContext()) : mMinVelocity;
-			float maxVelocity = Float.isNaN(mMaxVelocity) ? UiUtils.getScaledMaxFlingVelocity(v.getContext()) : mMaxVelocity;
-			if (velocity.x < minVelocity)
+        if (m.getActionMasked() == MotionEvent.ACTION_DOWN) {
+            mDownPos.set(m2screen.getX(), m2screen.getY());
+        }
+
+        while (m.getActionMasked() == MotionEvent.ACTION_UP) {
+            final PointF upPos = new PointF(m2screen.getX(), m2screen.getY());
+            if (calcDistance(mDownPos, upPos) < UiUtils.getScaledTouchSlop(v.getContext()))
+                break;
+
+			final float minVelocity = Float.isNaN(mMinVelocity) ? UiUtils.getScaledMinFlingVelocity(v.getContext()) : mMinVelocity;
+			final float maxVelocity = Float.isNaN(mMaxVelocity) ? UiUtils.getScaledMaxFlingVelocity(v.getContext()) : mMaxVelocity;
+
+            mVelocityTracker.computeCurrentVelocity(1000, maxVelocity);
+            final PointF velocity = new PointF(mVelocityTracker.getXVelocity(), mVelocityTracker.getYVelocity());
+			if (Math.abs(velocity.x) < minVelocity)
 				velocity.x = 0.0f;
-			if (velocity.y < minVelocity)
+			if (Math.abs(velocity.y) < minVelocity)
 				velocity.y = 0.0f;
-			velocity.x = Math.min(velocity.x, maxVelocity);
-			velocity.y = Math.min(velocity.y, maxVelocity);
-			
-			if (Float.compare(total.x, 0.0f) < 0)
-				velocity.x = -velocity.x;
-			if (Float.compare(total.y, 0.0f) < 0)
-				velocity.y = -velocity.y;
-			
-			if (UiUtils.isLineBetween(new PointF(0.0f, 0.0f), total, mMinAngle, mMaxAngle) == false)
-				return;
+
+            UiUtils.transformOffsetFromScreen(velocity, v);
+            if (UiUtils.isLineBetween(new PointF(0.0f, 0.0f), velocity, mMinAngle, mMaxAngle) == false)
+				break;
 			
 			if (Float.compare(Math.abs(velocity.x), 0.0f) != 0 || Float.compare(Math.abs(velocity.y), 0.0f) != 0) {
 				flingListener.onFling(this, v, new PointF(m.getX(0), m.getY(0)), velocity);
 			}
 
+            break;
 		}
-	}
+
+        m2screen.recycle();
+    }
 }

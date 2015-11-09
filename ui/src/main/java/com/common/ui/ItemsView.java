@@ -1220,6 +1220,10 @@ public abstract class ItemsView extends ViewGroup implements ItemsObserver, Scro
             }
 
             for (int index : mPinnedCellIndexList) {
+                // 跳过不合法的索引
+                if (index < 0 || index >= mItemCount)
+                    continue;
+
                 visualizeCell(index);
             }
 

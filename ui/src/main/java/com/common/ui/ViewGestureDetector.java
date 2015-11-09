@@ -34,14 +34,6 @@ public class ViewGestureDetector implements OnTouchListener {
 	}
 
 	// ### 方法 ###
-	public boolean hasGestureHolding() {
-		for (ViewGesture each : mGestureList) {
-			if (each.holdDetecting())
-				return true;
-		}
-		
-		return false;
-	}
 	public ViewGesture[] findGestures(Class<?>... classes) {
 		LinkedList<ViewGesture> foundList = new LinkedList<ViewGesture>();
 		for (ViewGesture g : mGestureList) {
@@ -137,26 +129,29 @@ public class ViewGestureDetector implements OnTouchListener {
 				mGestureListener.onTouchCancel(v, new PointF(m.getX(), m.getY()));
 			
 			reset(v);
-			return true;
+			return false;
 		} else if (m.getActionMasked() == MotionEvent.ACTION_UP) {
 			if (mDelayTouchUp && mDelayedTouchUp == null) {
 				mDelayedTouchUp = new DelayedTouchUp(v, m, intercept);
 				v.postDelayed(mDelayedTouchUp, ViewConfiguration.getDoubleTapTimeout());
-				return true;
+				return false;
 			}
 		}
 		
 		mDelayTouchUp = false;
-		detectGesture(v, m, delayed, intercept, mGestureListener);
+		final boolean handled = detectGesture(v, m, delayed, intercept, mGestureListener);
 		if (m.getAction() == MotionEvent.ACTION_UP) {
 			if (mGestureListener != null)
 				mGestureListener.onTouchUp(v, new PointF(m.getX(), m.getY()));
 
 			restartAllGestures(v);
 		}
-		return true;
+		return handled;
 	}
-	private void detectGesture(View v, MotionEvent m, boolean delayed, boolean intercept, ViewGesture.GestureListener listener) {
+	private boolean detectGesture(View v, MotionEvent m, boolean delayed, boolean intercept, ViewGesture.GestureListener listener) {
+		boolean anyHolding = false;
+		boolean anyDetected = false;
+		
 		// 处理需要持续探测的手势
 		while (mHoldDetectingGesture != null) {
 			if (mHoldDetectingGesture.getIsEnabled() == false) {
@@ -169,15 +164,20 @@ public class ViewGestureDetector implements OnTouchListener {
 				break;
 			}
 
+			anyHolding = true;
 			mHoldDetectingGesture.detect(v, m, delayed, intercept, listener);
 			mDelayTouchUp = mHoldDetectingGesture.delayTouchUp();
+			anyDetected = true;
 
 			if (mHoldDetectingGesture.holdDetecting() == false) {
 				mHoldDetectingGesture = null;
 				restartAllGestures(v);
 			}
 
-			return;
+			if (intercept)
+				return anyHolding;
+			else
+				return anyDetected;
 		}
 
 		// 探测所有手势
@@ -190,17 +190,25 @@ public class ViewGestureDetector implements OnTouchListener {
 			if (gesture.keepDetecting()) {
 				gesture.detect(v, m, delayed, intercept, listener);
 				mDelayTouchUp |= gesture.delayTouchUp();
+				anyDetected = true;
 			}
 
 			if (gesture.holdDetecting()) {
 				mHoldDetectingGesture = gesture;
 				resetAllGesturesExcept(v, mHoldDetectingGesture);
-				return;
+				anyHolding = true;
+				break;
 			}
 
-			if (gesture.skipNextDetecting())
-				return;
+			if (gesture.skipNextDetecting()) {
+				break;
+			}
 		}
+		
+		if (intercept)
+			return anyHolding;
+		else
+			return anyDetected;
 	}
 	private void restartAllGestures(View v) {
 		for (ViewGesture g : mGestureList) {
