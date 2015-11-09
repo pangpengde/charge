@@ -17,8 +17,5 @@
     <style name="AppTheme" parent="@style/AppBaseTheme">
     </style>
 
-    <declare-styleable name="FloatingHintEditText">
-        <attr name="floatingHintColor" format="color"/>
-    </declare-styleable>
 
 </resources>

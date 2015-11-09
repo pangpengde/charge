@@ -3,7 +3,9 @@ package com.px.charge.ui;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
+import android.text.Editable;
 import android.text.TextUtils;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -34,6 +36,41 @@ public class AddFragment extends BaseFragment {
 
         mTitle = (EditText) rootView.findViewById(R.id.activity_main__title);
         mNumber = (EditText) rootView.findViewById(R.id.activity_main__num);
+        mNumber.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if (s.toString().contains(".")) {
+                    if (s.length() - 1 - s.toString().indexOf(".") > 2) {
+                        s = s.toString().subSequence(0,
+                                s.toString().indexOf(".") + 3);
+                        mNumber.setText(s);
+                        mNumber.setSelection(s.length());
+                    }
+                }
+                if (s.toString().trim().substring(0).equals(".")) {
+                    s = "0" + s;
+                    mNumber.setText(s);
+                    mNumber.setSelection(2);
+                }
+                if (s.toString().startsWith("0")
+                        && s.toString().trim().length() > 1) {
+                    if (!s.toString().substring(1, 2).equals(".")) {
+                        mNumber.setText(s.subSequence(0, 1));
+                        mNumber.setSelection(1);
+                    }
+                }
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+
+            }
+        });
         rootView.findViewById(R.id.activity_main__ok).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {

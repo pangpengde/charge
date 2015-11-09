@@ -1,6 +1,7 @@
 package com.px.charge.ui;
 
 import android.app.Activity;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.util.Log;
@@ -10,6 +11,8 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import com.common.ui.DkWebListView;
+import com.common.ui.HorzLineDrawable;
+import com.common.ui.UiUtils;
 import com.px.charge.R;
 import com.px.charge.dao.AccountBook;
 import com.px.charge.dao.Charge;
@@ -24,6 +27,7 @@ import rx.functions.Action1;
  * Created by pangpengde on 15/8/16.
  */
 public class ListFragment extends BaseFragment implements AccountBook.AccountBookChangedListener {
+    private static final String TAG = "ListFragment";
     private static final int PAGE_COUNT = 25;
     private final LinkedList<Charge> mChargeList = new LinkedList<Charge>();
     private boolean mFirstAttach = false;
@@ -80,7 +84,9 @@ public class ListFragment extends BaseFragment implements AccountBook.AccountBoo
         Log.w("", "px onCreateView");
         mListView = new DkWebListView(getActivity());
         mListView.setAdapter(mAdapter);
-
+        HorzLineDrawable drawable = new HorzLineDrawable(Color.rgb(0xf2, 0xf2, 0xf2));
+        drawable.setHeight(UiUtils.dip2px(getContext(), 5));
+        mListView.setRowDivider(drawable);
         return mListView;
     }
 
@@ -89,7 +95,7 @@ public class ListFragment extends BaseFragment implements AccountBook.AccountBoo
         super.onResume();
         if (mFirstAttach == false) {
             mFirstAttach = true;
-//            loadData(0, PAGE_COUNT);
+            loadData(0, PAGE_COUNT);
         }
     }
 

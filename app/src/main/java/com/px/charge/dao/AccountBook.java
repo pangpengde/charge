@@ -71,9 +71,9 @@ public class AccountBook extends AsyncDatabase {
     public Observable query(final int index, final int pageCount) {
         return Observable.create(new Observable.OnSubscribe<List<? extends Charge>>() {
             @Override
-            public void call(Subscriber<? super List<? extends Charge>> subscriber) {
+            public void call(final Subscriber<? super List<? extends Charge>> subscriber) {
                     try {
-                        String sql = String.format("select * from charge limit %d offset %d", pageCount, index);
+                        String sql = String.format("select * from charge order by _id desc limit %d offset %d", pageCount, index);
                         Log.w("", "px sql " + sql);
                         Cursor cursor = mDb.rawQuery(sql, null);
                         LinkedList<Charge> chargeList = new LinkedList<Charge>();
@@ -90,16 +90,11 @@ public class AccountBook extends AsyncDatabase {
                         }
                         subscriber.onNext(chargeList);
                         subscriber.onCompleted();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        try {
-                            subscriber.onError(e);
-                        } catch (Exception e1) {
-                            e1.printStackTrace();
-                        }
+                    } catch (final Throwable e) {
+                        subscriber.onError(e);
                     }
                 }
-            }).observeOn(Schedulers.from(mDbWriter)).subscribeOn(AndroidSchedulers.mainThread());
+            }).observeOn(AndroidSchedulers.mainThread()).subscribeOn(Schedulers.from(mDbWriter));
     }
 
     // ### 实现函数 ###

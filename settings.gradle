@@ -1,1 +1,1 @@
-include ':app'
+include ':app', ':library', ':ui', ':fresco', ':glide', ':network', ':realm', ':account'
